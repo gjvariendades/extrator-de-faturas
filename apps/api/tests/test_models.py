@@ -121,3 +121,33 @@ def test_unique_constraint_sites_tenant_distributor_uc(db_session: Session) -> N
 
     with pytest.raises(IntegrityError):
         db_session.commit()
+
+
+def test_users_email_can_repeat_in_different_tenants(db_session: Session) -> None:
+    from app.models import User
+
+    tenant_a = Tenant(name="Tenant A")
+    tenant_b = Tenant(name="Tenant B")
+    db_session.add_all([tenant_a, tenant_b])
+    db_session.flush()
+
+    user_a = User(
+        tenant_id=tenant_a.id,
+        email="same@example.com",
+        full_name="User A",
+        hashed_password="hash",
+        role="admin",
+    )
+    user_b = User(
+        tenant_id=tenant_b.id,
+        email="same@example.com",
+        full_name="User B",
+        hashed_password="hash",
+        role="admin",
+    )
+
+    db_session.add_all([user_a, user_b])
+    db_session.commit()
+
+    users = db_session.query(User).filter(User.email == "same@example.com").all()
+    assert len(users) == 2
